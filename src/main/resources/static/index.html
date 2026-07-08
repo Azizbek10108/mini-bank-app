@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <title>Mini Bank</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 480px; margin: 40px auto; padding: 16px; background: #f5f5f5; }
+        h1 { text-align: center; color: #333; margin-bottom: 24px; }
+
+        .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+        .tab { flex: 1; padding: 10px; background: #ddd; border: none; cursor: pointer; border-radius: 6px; font-size: 13px; }
+        .tab.active { background: #1a237e; color: white; }
+
+        .page { display: none; background: white; padding: 24px; border-radius: 8px; }
+        .page.active { display: block; }
+
+        label { display: block; margin-bottom: 4px; font-size: 14px; color: #555; }
+        input { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+        button { width: 100%; padding: 12px; background: #1a237e; color: white; border: none; border-radius: 6px; font-size: 15px; cursor: pointer; }
+        button:hover { background: #283593; }
+
+        .msg { margin-top: 12px; padding: 10px; border-radius: 6px; font-size: 14px; display: none; }
+        .ok { background: #e8f5e9; color: #2e7d32; }
+        .err { background: #ffebee; color: #c62828; }
+    </style>
+</head>
+<body>
+
+<h1>🏦 Mini Bank</h1>
+
+<div class="tabs">
+    <button class="tab active" onclick="show('create', this)">Hisob ochish</button>
+    <button class="tab" onclick="show('balance', this)">Balans</button>
+    <button class="tab" onclick="show('deposit', this)">Qo'yish</button>
+    <button class="tab" onclick="show('withdraw', this)">Yechish</button>
+    <button class="tab" onclick="show('transfer', this)">O'tkazish</button>
+</div>
+
+<!-- Hisob ochish -->
+<div id="create" class="page active">
+    <label>Ism</label>
+    <input id="c-name" placeholder="Azizbek Karimov">
+    <label>Telefon</label>
+    <input id="c-phone" placeholder="+998901234567">
+    <label>PIN (4 raqam)</label>
+    <input id="c-pin" type="password" maxlength="4" placeholder="****">
+    <button onclick="createAcc()">Ochish</button>
+    <div class="msg" id="c-msg"></div>
+</div>
+
+<!-- Balans -->
+<div id="balance" class="page">
+    <label>Hisob ID</label>
+    <input id="b-id" type="number" placeholder="1">
+    <button onclick="getBalance()">Ko'rish</button>
+    <div class="msg" id="b-msg"></div>
+</div>
+
+<!-- Qo'yish -->
+<div id="deposit" class="page">
+    <label>Hisob ID</label>
+    <input id="d-id" type="number" placeholder="1">
+    <label>Summa</label>
+    <input id="d-sum" type="number" placeholder="10000">
+    <label>PIN</label>
+    <input id="d-pin" type="password" maxlength="4" placeholder="****">
+    <button onclick="deposit()">Qo'yish</button>
+    <div class="msg" id="d-msg"></div>
+</div>
+
+<!-- Yechish -->
+<div id="withdraw" class="page">
+    <label>Hisob ID</label>
+    <input id="w-id" type="number" placeholder="1">
+    <label>Summa</label>
+    <input id="w-sum" type="number" placeholder="5000">
+    <label>PIN</label>
+    <input id="w-pin" type="password" maxlength="4" placeholder="****">
+    <button onclick="withdraw()">Yechish</button>
+    <div class="msg" id="w-msg"></div>
+</div>
+
+<!-- O'tkazish -->
+<div id="transfer" class="page">
+    <label>Kimdan ID</label>
+    <input id="t-from" type="number" placeholder="1">
+    <label>Kimga ID</label>
+    <input id="t-to" type="number" placeholder="2">
+    <label>Summa</label>
+    <input id="t-sum" type="number" placeholder="5000">
+    <label>PIN</label>
+    <input id="t-pin" type="password" maxlength="4" placeholder="****">
+    <button onclick="transfer()">O'tkazish</button>
+    <div class="msg" id="t-msg"></div>
+</div>
+
+<script>
+    const API = 'http://localhost:8080/api/accounts';
+
+    function show(id, el) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        el.classList.add('active');
+    }
+
+    function msg(id, text, ok) {
+        const el = document.getElementById(id);
+        el.textContent = text;
+        el.className = 'msg ' + (ok ? 'ok' : 'err');
+        el.style.display = 'block';
+    }
+
+    async function createAcc() {
+        try {
+            const res = await fetch(API, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fullname: document.getElementById('c-name').value,
+                    phone: document.getElementById('c-phone').value,
+                    pinCode: document.getElementById('c-pin').value
+                })
+            });
+            const d = await res.json();
+            res.ok ? msg('c-msg', `✅ Hisob ochildi! ID: ${d.id}`, true)
+                : msg('c-msg', '❌ Xato yuz berdi', false);
+        } catch { msg('c-msg', '❌ Server ishlamayapti', false); }
+    }
+
+    async function getBalance() {
+        try {
+            const res = await fetch(`${API}/${document.getElementById('b-id').value}`);
+            const d = await res.json();
+            res.ok ? msg('b-msg', `👤 ${d.fullname} | 💰 ${d.balance.toLocaleString()} so'm`, true)
+                : msg('b-msg', '❌ Hisob topilmadi', false);
+        } catch { msg('b-msg', '❌ Server ishlamayapti', false); }
+    }
+
+    async function deposit() {
+        try {
+            const id = document.getElementById('d-id').value;
+            const sum = document.getElementById('d-sum').value;
+            const pin = document.getElementById('d-pin').value;
+            const res = await fetch(`${API}/${id}/deposit?amount=${sum}&pinCode=${pin}`, { method: 'PUT' });
+            const d = await res.json();
+            res.ok ? msg('d-msg', `✅ Qo'shildi! Balans: ${d.balance.toLocaleString()} so'm`, true)
+                : msg('d-msg', '❌ ' + (d.message || 'Xato'), false);
+        } catch { msg('d-msg', '❌ Server ishlamayapti', false); }
+    }
+
+    async function withdraw() {
+        try {
+            const id = document.getElementById('w-id').value;
+            const sum = document.getElementById('w-sum').value;
+            const pin = document.getElementById('w-pin').value;
+            const res = await fetch(`${API}/${id}/withdraw?amount=${sum}&pinCode=${pin}`, { method: 'PUT' });
+            const d = await res.json();
+            res.ok ? msg('w-msg', `✅ Yechildi! Balans: ${d.balance.toLocaleString()} so'm`, true)
+                : msg('w-msg', '❌ ' + (d.message || 'Xato'), false);
+        } catch { msg('w-msg', '❌ Server ishlamayapti', false); }
+    }
+
+    async function transfer() {
+        try {
+            const from = document.getElementById('t-from').value;
+            const to = document.getElementById('t-to').value;
+            const sum = document.getElementById('t-sum').value;
+            const pin = document.getElementById('t-pin').value;
+            const res = await fetch(`${API}/transfer?fromId=${from}&toId=${to}&amount=${sum}&pinCode=${pin}`, { method: 'POST' });
+            const text = await res.text();
+            res.ok ? msg('t-msg', '✅ ' + text, true)
+                : msg('t-msg', '❌ ' + text, false);
+        } catch { msg('t-msg', '❌ Server ishlamayapti', false); }
+    }
+</script>
+
+</body>
+</html>
